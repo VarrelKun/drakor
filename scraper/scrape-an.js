@@ -12,11 +12,8 @@ async function scrapeHome() {
     try {
         const { data } = await axios.get(BASE_URL, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            },
-            proxy: {
-                host: PROXY_HOST,
-                port: PROXY_PORT
+                'x-return-format': 'html',
+                'x-engine': 'cf-browser-rendering',
             }
         });
 
