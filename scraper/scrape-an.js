@@ -2,6 +2,8 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 
 const BASE_URL = "https://tv14.nontondrama.click";
+const PROXY_HOST = "43.128.96.101";
+const PROXY_PORT = 3128;
 
 /**
  * Scraping halaman home untuk mendapatkan daftar drama terbaru.
@@ -11,33 +13,33 @@ async function scrapeHome() {
         const { data } = await axios.get(BASE_URL, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            },
+            proxy: {
+                host: PROXY_HOST,
+                port: PROXY_PORT
             }
         });
 
-        console.log("✅ Berhasil mengambil HTML dari BASE_URL");
         const $ = cheerio.load(data);
-        
-        console.log("📌 Memeriksa elemen .infscroll-item");
         const dramas = [];
+
         $('.infscroll-item').each((i, el) => {
-            let title = $(el).find('.grid-title a').text().trim();
-            console.log(`🔍 Drama ditemukan: ${title}`);
+    let title = $(el).find('.grid-title a').text().trim();
+    const url = $(el).find('.grid-title a').attr('href') || '';
+    const image = $(el).find('.grid-poster img').attr('src') || '';
+    const rating = $(el).find('.rating').text().trim() || 'N/A';
+    const episodes = $(el).find('.last-episode span').text().trim() || 'Unknown';
+    const urlParts = url.split('/').filter(Boolean);
+    const slug = urlParts.pop();
+    title = title.replace(/^Nonton\s+/i, '')
+    title = title.replace(/\s*Film Subtitle Indonesia Streaming Movie Download$/i, '')
+    title = title.replace(/\t?Season\s*\d+/i, '')
+    dramas.push({ title: title.trim(), slug, image, episodes });
+});
 
-            const url = $(el).find('.grid-title a').attr('href') || '';
-            const image = $(el).find('.grid-poster img').attr('src') || '';
-            const episodes = $(el).find('.last-episode span').text().trim() || 'Unknown';
-
-            const urlParts = url.split('/').filter(Boolean);
-            const slug = urlParts.pop();
-            title = title.replace(/^Nonton\s+/i, '').replace(/\s*Film Subtitle Indonesia Streaming Movie Download$/i, '').replace(/\t?Season\s*\d+/i, '');
-
-            dramas.push({ title: title.trim(), slug, image, episodes });
-        });
-
-        console.log(`📌 Jumlah drama ditemukan: ${dramas.length}`);
         return dramas.length > 0 ? dramas : { error: "Tidak ada data yang ditemukan" };
+
     } catch (error) {
-        console.error("❌ Error saat scraping home:", error);
         return { error: "Gagal mengambil data dari halaman utama" };
     }
 }
