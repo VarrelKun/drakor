@@ -1,8 +1,9 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
-const fs = require('fs');
 
 const BASE_URL = "https://tv14.nontondrama.click";
+const PROXY_HOST = "43.128.96.101";
+const PROXY_PORT = 3128;
 
 /**
  * Scraping halaman home untuk mendapatkan daftar drama terbaru.
@@ -11,7 +12,7 @@ async function scrapeHome() {
     try {
         const { data } = await axios.get(BASE_URL, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36'
             }
         });
 
@@ -44,7 +45,7 @@ async function topDrama() {
     	const url = `https://tv14.nontondrama.click/top-movie-today/`;
         const { data } = await axios.get(url, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Mobile Safari/537.36'
             }
         });
 
@@ -76,7 +77,9 @@ async function topDrama() {
 async function scrapeDetail(slug) {
     try {
         const { data } = await axios.get(`https://tv14.nontondrama.click/${slug}/`, {
-            headers: { 'User-Agent': 'Mozilla/5.0' }
+            headers: { 
+					'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Mobile Safari/537.36'
+				}
         })
         const $ = cheerio.load(data)
 
@@ -106,7 +109,9 @@ async function episodeDetail(episodeSlug) {
         const episodeUrl = `${baseUrl}${episodeSlug}/`
 
         const { data } = await axios.get(episodeUrl, {
-            headers: { "User-Agent": "Mozilla/5.0" }
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36'
+            }
         })
 
         const $ = cheerio.load(data)
@@ -138,7 +143,9 @@ async function searchDrama(search) {
     try {
     	const linkImg = "https://s3.lk21static.buzz"
         const { data } = await axios.get(`https://tv14.nontondrama.click/search.php?s=${encodeURIComponent(search)}`, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36'
+            }
         });
 
         const $ = cheerio.load(data);
