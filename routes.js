@@ -1,5 +1,5 @@
 const express = require('express');
-const { scrapeHome, scrapeDetail, topDrama, episodeDetail, searchDrama } = require('./scraper/drakorScraper')
+const { scrapeHome, scrapeDetail, topDrama, episodeDetail, searchDrama } = require('./scraper/scrape-an')
 
 const router = express.Router();
 
