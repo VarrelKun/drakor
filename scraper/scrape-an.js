@@ -12,8 +12,7 @@ async function scrapeHome() {
     try {
         const { data } = await axios.get(BASE_URL, {
             headers: {
-                'x-return-format': 'html',
-                'x-engine': 'cf-browser-rendering',
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36'
             }
         });
 
