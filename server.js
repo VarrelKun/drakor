@@ -13,6 +13,7 @@ app.use('/api', routes);
 app.get('/', (req, res) => {
     res.json({
         message: "Welcome to Drakor API",
+        author: "© gopalasu",
         endpoints: {
             home: "/api/home",
             detail: "/api/detail/:slug",
