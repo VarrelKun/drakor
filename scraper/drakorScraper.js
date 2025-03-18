@@ -126,7 +126,7 @@ async function episodeDetail(episodeSlug) {
                 const realUrl = decodeURIComponent(urlObj.searchParams.get("url"))
 
                 if (realUrl) {
-                    providers.push({ provider: providerName, iframeUrl: realUrl })
+                    providers.push({ provider: providerName, iframeUrl: urlObj })
                 }
             }
         })
