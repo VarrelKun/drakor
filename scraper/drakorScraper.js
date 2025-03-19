@@ -88,6 +88,7 @@ async function scrapeDetail(slug) {
         let synopsis = $('blockquote strong:contains("Synopsis")').parent().text().replace('Synopsis', '').trim() || "Tidak ada sinopsis"
         let genres = $('h2:contains("Genre")').next().find('a').map((_, el) => $(el).text().trim()).get()
         let status = $('h2:contains("Status")').next().text().trim() || "Unknown"
+	let date = $('h2:contains("Diterbitkan")').next().text().trim() || "Undefined"
         let image = $('.content-poster img').attr('src')
         if (image && image.startsWith('//')) image = 'https:' + image
         let episodes = $('.episode-list a.btn-primary').map((_, el) => ({
@@ -95,7 +96,7 @@ async function scrapeDetail(slug) {
             slug: $(el).attr('href')?.split('/').filter(Boolean).pop() || "#"
         })).get()
 
-        return { title, status, genres, synopsis, image, episodes }
+        return { title, status, date, genres, synopsis, image, episodes }
     } catch {
         return { error: "Data tidak ditemukan atau URL tidak valid" }
     }
