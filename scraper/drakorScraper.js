@@ -1,7 +1,8 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+const fs = require('fs');
 
-const BASE_URL = "https://tv14.nontondrama.click";
+const BASE_URL = "https://tv15.nontondrama.click";
 const PROXY_HOST = "43.128.96.101";
 const PROXY_PORT = 3128;
 
@@ -42,7 +43,7 @@ async function scrapeHome() {
 
 async function topDrama() {
     try {
-    	const url = `https://tv14.nontondrama.click/top-movie-today/`;
+    	const url = `https://tv15.nontondrama.click/top-movie-today/`;
         const { data } = await axios.get(url, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Mobile Safari/537.36'
@@ -76,7 +77,7 @@ async function topDrama() {
  */
 async function scrapeDetail(slug) {
     try {
-        const { data } = await axios.get(`https://tv14.nontondrama.click/${slug}/`, {
+        const { data } = await axios.get(`https://tv15.nontondrama.click/${slug}/`, {
             headers: { 
 					'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Mobile Safari/537.36'
 				}
@@ -88,7 +89,7 @@ async function scrapeDetail(slug) {
         let synopsis = $('blockquote strong:contains("Synopsis")').parent().text().replace('Synopsis', '').trim() || "Tidak ada sinopsis"
         let genres = $('h2:contains("Genre")').next().find('a').map((_, el) => $(el).text().trim()).get()
         let status = $('h2:contains("Status")').next().text().trim() || "Unknown"
-	let date = $('h2:contains("Diterbitkan")').next().text().trim() || "Undefined"
+        let date = $('h2:contains("Diterbitkan")').next().text().trim() || "Undefined"
         let image = $('.content-poster img').attr('src')
         if (image && image.startsWith('//')) image = 'https:' + image
         let episodes = $('.episode-list a.btn-primary').map((_, el) => ({
@@ -104,46 +105,50 @@ async function scrapeDetail(slug) {
 
 async function episodeDetail(episodeSlug) {
     try {
-        if (!episodeSlug) throw new Error("Episode slug tidak boleh kosong")
+        if (!episodeSlug) throw new Error("Episode slug tidak boleh kosong");
 
-        const baseUrl = "https://tv14.nontondrama.click/"
-        const episodeUrl = `${baseUrl}${episodeSlug}/`
+        const baseUrl = "https://tv15.nontondrama.click/";
+        const episodeUrl = `${baseUrl}${episodeSlug}/`;
 
         const { data } = await axios.get(episodeUrl, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36'
             }
-        })
+        });
 
-        const $ = cheerio.load(data)
-        const providers = []
+        const $ = cheerio.load(data);
+        const providers = [];
 
         $("#loadProviders li a").each((_, el) => {
-            const providerName = $(el).text().trim()
-            const providerUrl = $(el).attr("href")
+            const providerName = $(el).text().trim();
+            const providerUrl = $(el).attr("href");
 
             if (providerName && providerUrl) {
-                const urlObj = new URL(providerUrl)
-                const realUrl = decodeURIComponent(urlObj.searchParams.get("url"))
+                try {
+                    const urlObj = new URL(providerUrl);
+                    const realUrl = decodeURIComponent(urlObj.searchParams.get("url"));
 
-                if (realUrl) {
-                    providers.push({ provider: providerName, iframeUrl: urlObj })
+                    if (realUrl) {
+                        providers.push({ provider: providerName, iframeUrl: realUrl });
+                    }
+                } catch (err) {
+                    console.warn(`Gagal memproses URL: ${providerUrl}`);
                 }
             }
-        })
+        });
 
-        if (!providers.length) return { episodeSlug, error: "❌ Provider tidak ditemukan" }
+        if (!providers.length) return { episodeSlug, error: "❌ Provider tidak ditemukan" };
 
-        return { episodeSlug, providers }
+        return { episodeSlug, providers };
     } catch (error) {
-        return { episodeSlug, error: error.message }
+        return { episodeSlug, error: error.message };
     }
 }
 
 async function searchDrama(search) {
     try {
     	const linkImg = "https://s3.lk21static.buzz"
-        const { data } = await axios.get(`https://tv14.nontondrama.click/search.php?s=${encodeURIComponent(search)}`, {
+        const { data } = await axios.get(`https://tv15.nontondrama.click/search.php?s=${encodeURIComponent(search)}`, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36'
             }
@@ -162,4 +167,49 @@ async function searchDrama(search) {
     }
 }
 
-module.exports = { scrapeHome, scrapeDetail, topDrama, searchDrama, episodeDetail };
+async function idlix() {
+    try {
+        const episodeUrl = "https://www.viu.com/ott/id/id/category/549/Drama-Korea";
+
+        // Ambil halaman utama episode
+        const { data } = await axios.get(episodeUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36'
+            }
+        });
+
+        const $ = cheerio.load(data);
+        fs.writeFileSync('viu.html', $.html()); 
+        const oEmbedUrl = $('link[rel="alternate"][type="application/json+oembed"]').attr("href");
+
+        if (!oEmbedUrl) return { error: "❌ Tidak ditemukan URL oEmbed" };
+
+        // Request ke oEmbed API untuk mendapatkan iframe embed
+        const { data: oEmbedData } = await axios.get(oEmbedUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+
+        const iframeMatch = oEmbedData.html.match(/src="([^"]+)"/);
+        const embedUrl = iframeMatch ? iframeMatch[1] : null;
+
+        if (!embedUrl) return { error: "❌ Tidak ditemukan iframe URL" };
+
+        // Request ke halaman embed untuk mencari sumber video
+        const { data: embedPage } = await axios.get(embedUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+
+        const $$ = cheerio.load(embedPage);
+
+        // Cari iframe lain di dalam halaman embed
+        const finalIframe = $$("iframe").attr("src");
+
+        if (!finalIframe) return { error: "❌ Tidak ditemukan iframe dalam halaman embed" };
+
+        return { videoIframeUrl: finalIframe };
+    } catch (error) {
+        return { error: error.message };
+    }
+}
+
+module.exports = { scrapeHome, scrapeDetail, topDrama, searchDrama, episodeDetail, idlix };
