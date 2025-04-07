@@ -18,9 +18,12 @@ app.get('/', (req, res) => {
         author: "© gopalasu",
         endpoints: {
             home: "/api/home",
+            drama: "/api/drama/:page",
             detail: "/api/detail/:slug",
             episode: "/api/episode/:slug",
-            search: "/api/search/:search"
+            search: "/api/search/:search",
+            movie: "/api/movie/:page",
+            "movie detail": "/api/movie/x/:slug"
         }
     });
 });
