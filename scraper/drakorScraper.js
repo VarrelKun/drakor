@@ -2,7 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
 
-const BASE_URL = "https://tv15.nontondrama.click";
+const BASE_URL = "https://tv16.nontondrama.click";
 const PROXY_HOST = "43.128.96.101";
 const PROXY_PORT = 3128;
 
@@ -41,12 +41,11 @@ async function scrapeHome() {
     }
 }
 
-async function topDrama() {
+async function dramaHome(page) {
     try {
-    	const url = `https://tv15.nontondrama.click/top-movie-today/`;
-        const { data } = await axios.get(url, {
+        const { data } = await axios.get(`https://tv16.nontondrama.click/country/south-korea/page/${page}/`, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Mobile Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36'
             }
         });
 
@@ -54,16 +53,18 @@ async function topDrama() {
         const dramas = [];
 
         $('.infscroll-item').each((i, el) => {
-            const title = $(el).find('.grid-title a').text().trim();
-            const url = $(el).find('.grid-title a').attr('href') || '';
-            const image = $(el).find('.grid-poster img').attr('src') || '';
-            const rating = $(el).find('.rating').text().trim() || 'N/A';
-            const episodes = $(el).find('.last-episode span').text().trim() || 'Unknown';
-            const categories = $(el).find('.grid-categories a').map((i, el) => $(el).text().trim()).get();
-            const trailer = $(el).find('.fancybox').attr('href') || '';
-
-            dramas.push({ title, url, image, rating, episodes, categories, trailer });
-        });
+    let title = $(el).find('.grid-title a').text().trim();
+    const url = $(el).find('.grid-title a').attr('href') || '';
+    const image = $(el).find('.grid-poster img').attr('src') || '';
+    const rating = $(el).find('.rating').text().trim() || 'N/A';
+    const episodes = $(el).find('.last-episode span').text().trim() || 'Unknown';
+    const urlParts = url.split('/').filter(Boolean);
+    const slug = urlParts.pop();
+    title = title.replace(/^Nonton\s+/i, '')
+    title = title.replace(/\s*Film Subtitle Indonesia Streaming Movie Download$/i, '')
+    title = title.replace(/\t?Season\s*\d+/i, '')
+    dramas.push({ title: title.trim(), slug, image, episodes });
+});
 
         return dramas.length > 0 ? dramas : { error: "Tidak ada data yang ditemukan" };
 
@@ -77,7 +78,7 @@ async function topDrama() {
  */
 async function scrapeDetail(slug) {
     try {
-        const { data } = await axios.get(`https://tv15.nontondrama.click/${slug}/`, {
+        const { data } = await axios.get(`https://tv16.nontondrama.click/${slug}/`, {
             headers: { 
 					'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Mobile Safari/537.36'
 				}
@@ -103,11 +104,14 @@ async function scrapeDetail(slug) {
     }
 }
 
+/**
+ * Scraping detail episode drama berdasarkan slug.
+ */
 async function episodeDetail(episodeSlug) {
     try {
         if (!episodeSlug) throw new Error("Episode slug tidak boleh kosong");
 
-        const baseUrl = "https://tv15.nontondrama.click/";
+        const baseUrl = "https://tv16.nontondrama.click/";
         const episodeUrl = `${baseUrl}${episodeSlug}/`;
 
         const { data } = await axios.get(episodeUrl, {
@@ -145,10 +149,13 @@ async function episodeDetail(episodeSlug) {
     }
 }
 
+/**
+ * Scraping pencarian drama berdasarkan query.
+ */
 async function searchDrama(search) {
     try {
     	const linkImg = "https://s3.lk21static.buzz"
-        const { data } = await axios.get(`https://tv15.nontondrama.click/search.php?s=${encodeURIComponent(search)}`, {
+        const { data } = await axios.get(`https://tv16.nontondrama.click/search.php?s=${encodeURIComponent(search)}`, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36'
             }
@@ -167,49 +174,120 @@ async function searchDrama(search) {
     }
 }
 
-async function idlix() {
-    try {
-        const episodeUrl = "https://www.viu.com/ott/id/id/category/549/Drama-Korea";
+/**
+ * Scraping detail movie berdasarkan slug.
+ */
+async function movieDetail(slug) {
+  const url = `https://tv3.lk21official.cc/${slug}`;
 
-        // Ambil halaman utama episode
-        const { data } = await axios.get(episodeUrl, {
+  try {
+    const { data } = await axios.get(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
+      },
+    });
+
+    const $ = cheerio.load(data);
+
+    let title = $('.post-header h2').text().trim();
+    title = title.replace(/\s*Film Subtitle Indonesia Streaming\s*\/\s*Download$/i, '');
+    title = title.replace(/\t?Season\s*\d+/i, '') 
+    const thumbnail = $('.content-poster img').attr('src')?.replace(/^\/\//, 'https://');
+    const kualitas = $('h2:contains("Kualitas")').next('h3').text().trim();
+    const negara = $('h2:contains("Negara")').next('h3').text().trim();
+    const genre = $('h2:contains("Genre")').next('h3').text().split(',').map(g => g.trim());
+    const dir = $('h2:contains("Sutradara")').next('h3').text().trim();
+    const stars = $('h2:contains("Bintang film")').nextAll('h3').map((i, el) => $(el).text().trim()).get();
+    const date = $('h2:contains("Diterbitkan")').next('h3').text().trim();
+    const translator = $('h2:contains("Penerjemah")').next('h3').text().trim();
+    const synopsis = $('blockquote strong:contains("Synopsis")')
+      .parent()
+      .text()
+      .replace('Synopsis', '')
+      .trim();
+
+    let streams = [];
+
+    // UPDATE DI SINI: scrape dari #loadProviders
+    $('#loadProviders li a').each((i, el) => {
+      const href = $(el).attr('href');
+      const label = $(el).text().trim();
+      const quality = $(el).attr('rel') || 'unknown';
+
+      if (href && !href.includes('ads')) {
+        streams.push({
+          label,
+          url: href.startsWith('//') ? 'https:' + href : href,
+          quality,
+        });
+      }
+    });
+
+    // Fallback ke tv16 jika kosong
+    if (streams.length === 0) {
+      try {
+        const alt = await axios.get(`https://tv16.nontondrama.click/${slug}`);
+        const _$ = cheerio.load(alt.data);
+        _$('iframe').each((i, el) => {
+          const src = _$(el).attr('src');
+          if (src && !src.includes('ads')) {
+            streams.push({
+              label: 'Backup',
+              url: src.startsWith('//') ? 'https:' + src : src,
+              quality: 'unknown'
+            });
+          }
+        });
+      } catch (e) {
+        // Biarin aja kalo fallback gagal
+      }
+    }
+
+    return {
+      title,
+      negara,
+      genre,
+      date,
+      synopsis,
+      streams
+    };
+
+  } catch (err) {
+    return { error: true, message: err.message };
+  }
+}
+
+async function movieHome(page) {
+    try {
+        const { data } = await axios.get(`https://tv3.lk21official.cc/latest/page/${page}/`, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36'
             }
         });
 
         const $ = cheerio.load(data);
-        fs.writeFileSync('viu.html', $.html()); 
-        const oEmbedUrl = $('link[rel="alternate"][type="application/json+oembed"]').attr("href");
+        const dramas = [];
 
-        if (!oEmbedUrl) return { error: "❌ Tidak ditemukan URL oEmbed" };
+        $('.infscroll-item').each((i, el) => {
+    let title = $(el).find('.grid-title a').text().trim();
+    const url = $(el).find('.grid-title a').attr('href') || '';
+    const image = $(el).find('.grid-poster img').attr('src') || '';
+    const rating = $(el).find('.rating').text().trim() || 'N/A';
+    const episodes = $(el).find('.last-episode span').text().trim() || 'Unknown';
+    const urlParts = url.split('/').filter(Boolean);
+    const slug = urlParts.pop();
+    title = title.replace(/^Nonton\s+/i, '')
+    title = title.replace(/\s*Film Subtitle Indonesia Streaming Movie Download$/i, '')
+    title = title.replace(/\t?Season\s*\d+/i, '')
+    dramas.push({ title: title.trim(), slug, image });
+});
 
-        // Request ke oEmbed API untuk mendapatkan iframe embed
-        const { data: oEmbedData } = await axios.get(oEmbedUrl, {
-            headers: { 'User-Agent': 'Mozilla/5.0' }
-        });
+        return dramas.length > 0 ? dramas : { error: "Tidak ada data yang ditemukan" };
 
-        const iframeMatch = oEmbedData.html.match(/src="([^"]+)"/);
-        const embedUrl = iframeMatch ? iframeMatch[1] : null;
-
-        if (!embedUrl) return { error: "❌ Tidak ditemukan iframe URL" };
-
-        // Request ke halaman embed untuk mencari sumber video
-        const { data: embedPage } = await axios.get(embedUrl, {
-            headers: { 'User-Agent': 'Mozilla/5.0' }
-        });
-
-        const $$ = cheerio.load(embedPage);
-
-        // Cari iframe lain di dalam halaman embed
-        const finalIframe = $$("iframe").attr("src");
-
-        if (!finalIframe) return { error: "❌ Tidak ditemukan iframe dalam halaman embed" };
-
-        return { videoIframeUrl: finalIframe };
     } catch (error) {
-        return { error: error.message };
+        return { error: "Gagal mengambil data dari halaman utama" };
     }
 }
 
-module.exports = { scrapeHome, scrapeDetail, topDrama, searchDrama, episodeDetail, idlix };
+module.exports = { scrapeHome, scrapeDetail, dramaHome, searchDrama, episodeDetail, movieHome, movieDetail };
